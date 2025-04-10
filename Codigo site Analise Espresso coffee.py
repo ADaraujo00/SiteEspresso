@@ -6,7 +6,6 @@ import pandas as pd
 st.set_page_config(page_title="Análise de Café", layout="wide")
 st.title("Análise de Extração de Café")
 
-# Labels fixos como "banco de dados"
 labels = [
     "Simple espresso (Conventional coffee)",
     "Lungo espresso (Conventional coffee)",
@@ -18,9 +17,9 @@ labels = [
     "Double lungo espresso (Specialty coffee)"
 ]
 
-st.markdown("### Preencha os dados na tabela abaixo:")
+st.markdown("### Preencha os dados com **vírgula** como separador decimal:")
 
-# Criar DataFrame base com campos vazios
+# Tabela inicial
 df_input = pd.DataFrame({
     "Tipo de café": labels,
     "Pó de café (g)": ["" for _ in labels],
@@ -28,7 +27,7 @@ df_input = pd.DataFrame({
     "TDS (%)": ["" for _ in labels]
 })
 
-# Mostrar editor de tabela
+# Interface de edição
 df_editado = st.data_editor(
     df_input,
     use_container_width=True,
@@ -37,19 +36,16 @@ df_editado = st.data_editor(
     key="tabela"
 )
 
-# Botão para gerar gráfico
 if st.button("Gerar gráfico"):
     try:
-        # Tentar converter todas as colunas numéricas
-        df_editado["Pó de café (g)"] = df_editado["Pó de café (g)"].astype(float)
-        df_editado["Líquido extraído (g)"] = df_editado["Líquido extraído (g)"].astype(float)
-        df_editado["TDS (%)"] = df_editado["TDS (%)"].astype(float)
+        # Substituir ',' por '.' e converter para float
+        for col in ["Pó de café (g)", "Líquido extraído (g)", "TDS (%)"]:
+            df_editado[col] = df_editado[col].str.replace(",", ".")
+            df_editado[col] = df_editado[col].astype(float)
 
-        # Calcular extração
         extracao = (df_editado["Líquido extraído (g)"] * df_editado["TDS (%)"]) / df_editado["Pó de café (g)"]
         tds = df_editado["TDS (%)"].tolist()
 
-        # Marcadores e cores
         marcadores = ['x' if 'Conventional' in label else 'o' for label in labels]
         colors = plt.cm.get_cmap('tab20', len(labels))
 
@@ -71,7 +67,7 @@ if st.button("Gerar gráfico"):
         st.pyplot(fig)
 
     except ValueError:
-        st.error("⚠️ Por favor, preencha todos os campos com valores numéricos válidos.")
+        st.error("⚠️ Por favor, preencha todos os campos com números usando vírgula como separador decimal (ex: 10,25).")
     except ZeroDivisionError:
         st.error("⚠️ O valor de 'Pó de café (g)' não pode ser zero.")
     except Exception as e:
