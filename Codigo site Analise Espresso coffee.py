@@ -1,12 +1,13 @@
+import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
-# Dados fornecidos
-extracao = [19.97578042, 20.10653034, 18.55023605, 22.258602,
-            17.04259947, 20.68181579, 16.0463482, 19.08092593]
-tds = [3.83, 1.75, 6.91, 3.74, 4.82, 4.66, 7.07, 3.77]
+st.set_page_config(page_title="Análise de Café", layout="wide")
 
-# Legendas associadas
+st.title("Análise de Extração de Café")
+
+# Labels fixos como banco de dados
 labels = [
     "Simple espresso (Conventional coffee)",
     "Lungo espresso (Conventional coffee)",
@@ -18,35 +19,60 @@ labels = [
     "Double lungo espresso (Specialty coffee)"
 ]
 
-# Definir marcadores com base no tipo de café
-marcadores = ['x' if 'Conventional' in label else 'o' for label in labels]
+st.markdown("### Insira os dados de preparo para cada tipo de café:")
 
-# Cores distintas
-colors = plt.cm.get_cmap('tab20', len(extracao))
+# Criar dataframe base com labels
+df_input = pd.DataFrame({
+    "Tipo de café": labels,
+    "Pó de café (g)": [None] * len(labels),
+    "Líquido extraído (g)": [None] * len(labels),
+    "TDS (%)": [None] * len(labels)
+})
 
-# Criar figura
-fig, ax = plt.subplots(figsize=(10, 8))
+# Mostrar editor de tabela
+df_editado = st.data_editor(
+    df_input,
+    use_container_width=True,
+    num_rows="fixed",
+    hide_index=True,
+    key="tabela"
+)
 
-# Adicionar áreas destacadas
-ax.axhspan(8, 12, facecolor='lightgreen', alpha=0.3)
-ax.axvspan(18, 22, facecolor='lightgreen', alpha=0.3)
+# Botão para gerar gráfico
+if st.button("Gerar gráfico"):
+    # Verificar se todos os valores estão preenchidos
+    if df_editado.isnull().values.any():
+        st.error("Por favor, preencha todos os campos da tabela antes de gerar o gráfico.")
+    else:
+        extracao = []
+        tds = df_editado["TDS (%)"].tolist()
 
-# Plotar os pontos
-for i in range(len(extracao)):
-    ax.scatter(extracao[i], tds[i], label=labels[i],
-               color=colors(i), marker=marcadores[i], s=100)
+        # Calcular extração para cada linha
+        for i, row in df_editado.iterrows():
+            in_cafe = row["Pó de café (g)"]
+            out_liquido = row["Líquido extraído (g)"]
+            tds_percentual = row["TDS (%)"]
+            extracao_calc = (out_liquido * tds_percentual) / in_cafe
+            extracao.append(extracao_calc)
 
-# Configurar grades
-ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+        # Marcadores baseados no tipo de café
+        marcadores = ['x' if 'Conventional' in label else 'o' for label in labels]
+        colors = plt.cm.get_cmap('tab20', len(labels))
 
-# Rótulos dos eixos
-ax.set_xlabel('Extração (%)')
-ax.set_ylabel('TDS (%)')
+        # Plot do gráfico
+        fig, ax = plt.subplots(figsize=(10, 8))
+        ax.axhspan(8, 12, facecolor='lightgreen', alpha=0.3)
+        ax.axvspan(18, 22, facecolor='lightgreen', alpha=0.3)
 
-# Legenda menor na parte inferior do gráfico
-ax.legend(loc='upper center', bbox_to_anchor=(
-    0.5, -0.25), fontsize='small', ncol=2)
+        for i in range(len(labels)):
+            ax.scatter(extracao[i], tds[i], label=labels[i],
+                       color=colors(i), marker=marcadores[i], s=100)
 
-# Ajuste de layout
-plt.tight_layout()
-plt.show()
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+        ax.set_xlabel('Extração (%)')
+        ax.set_ylabel('TDS (%)')
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25),
+                  fontsize='small', ncol=2)
+        plt.tight_layout()
+
+        st.pyplot(fig)
